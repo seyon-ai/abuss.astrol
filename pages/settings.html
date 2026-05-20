@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Settings</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+.settings-section { margin-bottom:28px; }
+.settings-row { display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--border); }
+.settings-row:last-child { border-bottom:none; }
+.settings-label { font-size:14px; font-weight:500; }
+.settings-desc  { font-size:12px; color:var(--text-sub); margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<nav class="navbar">
+  <div class="navbar-brand"><a class="astro-logo" href="dashboard.html"><span class="astro-logo-sym">⟁</span><span class="astro-logo-text">Astrolabuss</span></a></div>
+  <div class="navbar-nav">
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">⊞</span> Dashboard</a>
+    <a class="nav-link" href="devices.html"><span class="nav-icon">💻</span> Devices</a>
+    <a class="nav-link" href="security-log.html"><span class="nav-icon">📋</span> Security Log</a>
+    <a class="nav-link" href="id-card.html"><span class="nav-icon">🪪</span> ID Card</a>
+    <a class="nav-link active" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="navUser" class="badge badge-gold"></span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <a class="sidebar-link" href="dashboard.html"><span class="sidebar-icon">⊞</span> Dashboard</a>
+      <a class="sidebar-link" href="devices.html"><span class="sidebar-icon">💻</span> Trusted Devices</a>
+      <a class="sidebar-link" href="security-log.html"><span class="sidebar-icon">📋</span> Security Log</a>
+      <a class="sidebar-link" href="id-card.html"><span class="sidebar-icon">🪪</span> Identity Card</a>
+      <a class="sidebar-link active" href="settings.html"><span class="sidebar-icon">⚙️</span> Settings</a>
+      <a class="sidebar-link" href="recovery.html"><span class="sidebar-icon">🔄</span> Recovery</a>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-title anim-fade-up">Account Settings</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:32px" class="anim-fade-up-d1">Manage your security configuration, login window, and account preferences.</div>
+
+    <!-- Login Time Window -->
+    <div class="card settings-section anim-fade-up-d1" style="margin-bottom:20px">
+      <div class="card-title">Login Time Window</div>
+      <div class="card-subtitle">Restrict account access to specific hours</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="form-group">
+          <label class="form-label">Allow From</label>
+          <input class="form-input" type="time" id="tw_start" value="00:00">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Allow Until</label>
+          <input class="form-input" type="time" id="tw_end" value="23:59">
+        </div>
+      </div>
+      <div class="alert alert-warn mb-16">Setting a tight window means you cannot login outside those hours — even in emergencies.</div>
+      <button class="btn btn-primary btn-sm" id="btnSaveWindow" onclick="saveTimeWindow()">Save Time Window</button>
+    </div>
+
+    <!-- Security Questions -->
+    <div class="card settings-section anim-fade-up-d2" style="margin-bottom:20px">
+      <div class="card-title">Update Security Questions</div>
+      <div class="card-subtitle">Change any of your 3 secret questions and answers</div>
+      <div id="sqForms">
+        ${[0,1,2].map(i=>`
+          <div class="form-group">
+            <label class="form-label">Question ${i+1}</label>
+            <select class="form-input" id="sq_q${i}">
+              <option value="">— Select —</option>
+            </select>
+            <input class="form-input mt-8" type="text" id="sq_a${i}" placeholder="New answer (leave blank to keep current)">
+          </div>`).join('')}
+      </div>
+      <button class="btn btn-primary btn-sm" id="btnSaveSQ" onclick="saveSecQ()">Update Questions</button>
+    </div>
+
+    <!-- Image PIN -->
+    <div class="card settings-section anim-fade-up-d2" style="margin-bottom:20px">
+      <div class="card-title">Reset Image PIN</div>
+      <div class="card-subtitle">Choose 4 new images in a new order</div>
+      <div class="img-grid" id="imgGrid" style="margin-bottom:12px">
+        <!-- rendered by JS -->
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-bottom:16px" id="imgHint">Select 4 images in order</div>
+      <button class="btn btn-primary btn-sm" id="btnSaveImg" onclick="saveImgPin()" disabled>Save New Image PIN</button>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="card anim-fade-up-d3" style="border-color:rgba(224,85,85,0.3)">
+      <div class="card-title" style="color:var(--danger)">Danger Zone</div>
+      <div class="card-subtitle">Irreversible actions — proceed with caution</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Sign Out All Devices</div>
+          <div class="settings-desc">Immediately invalidates all active sessions</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="signOutAll()">Sign Out All</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Clear Security Log</div>
+          <div class="settings-desc">Permanently delete all security event history</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="clearLog()">Clear Log</button>
+      </div>
+      <div class="settings-row" style="border-bottom:none">
+        <div>
+          <div class="settings-label">Delete Account</div>
+          <div class="settings-desc">Permanently delete your Astrolabuss identity</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="deleteAccount()">Delete Account</button>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module">
+import {
+  auth, db, getUserDoc, updateUserDoc, hashText, toast,
+  SECURITY_QUESTIONS, IMAGE_TILES, setLoading,
+  onAuthStateChanged, signOut, collection, getDocs, doc, deleteDoc
+} from '../js/firebase.js';
+import { deleteUser } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+let userData = null;
+let newImgPin = [];
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href='login.html'; return; }
+  userData = await getUserDoc(user.uid);
+  if (!userData) { window.location.href='login.html'; return; }
+  document.getElementById('navUser').textContent = userData.username;
+
+  // Populate time window
+  document.getElementById('tw_start').value = userData.loginWindow?.start || '00:00';
+  document.getElementById('tw_end').value   = userData.loginWindow?.end   || '23:59';
+
+  // Populate SQ dropdowns
+  [0,1,2].forEach(i => {
+    const sel = document.getElementById(`sq_q${i}`);
+    if (!sel) return;
+    SECURITY_QUESTIONS.forEach(q => {
+      const opt = document.createElement('option');
+      opt.value = q; opt.textContent = q;
+      if (userData.securityQuestions?.[i]?.question === q) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  // Render image grid
+  renderImgGrid();
+});
+
+function renderImgGrid() {
+  const grid = document.getElementById('imgGrid');
+  if (!grid) return;
+  grid.innerHTML = IMAGE_TILES.map((img, i) => {
+    const oi = newImgPin.indexOf(i);
+    const sel = oi !== -1;
+    return `<div class="img-tile${sel?' selected':''}" onclick="toggleImg(${i})" id="tile${i}">
+      ${img}${sel?`<div class="img-order">${oi+1}</div>`:''}
+    </div>`;
+  }).join('');
+  const hint = document.getElementById('imgHint');
+  if (hint) hint.textContent = `Selected: ${newImgPin.length} / 4`;
+  const btn = document.getElementById('btnSaveImg');
+  if (btn) btn.disabled = newImgPin.length < 4;
+}
+
+window.toggleImg = i => {
+  const idx = newImgPin.indexOf(i);
+  if (idx !== -1) newImgPin.splice(idx, 1);
+  else if (newImgPin.length < 4) newImgPin.push(i);
+  renderImgGrid();
+};
+
+window.saveTimeWindow = async () => {
+  const start = document.getElementById('tw_start').value;
+  const end   = document.getElementById('tw_end').value;
+  const btn = document.getElementById('btnSaveWindow');
+  setLoading(btn, true);
+  await updateUserDoc(auth.currentUser.uid, { loginWindow: { start, end } });
+  toast('Time window updated', 'success');
+  setLoading(btn, false, 'Save Time Window');
+};
+
+window.saveSecQ = async () => {
+  const btn = document.getElementById('btnSaveSQ');
+  setLoading(btn, true);
+  const updated = [];
+  for (let i=0; i<3; i++) {
+    const q = document.getElementById(`sq_q${i}`)?.value;
+    const a = document.getElementById(`sq_a${i}`)?.value.trim();
+    if (!q) { toast(`Select a question for slot ${i+1}`, 'danger'); setLoading(btn,false,'Update Questions'); return; }
+    const hash = a ? await hashText(a) : userData.securityQuestions?.[i]?.answerHash;
+    updated.push({ question:q, answerHash:hash });
+  }
+  await updateUserDoc(auth.currentUser.uid, { securityQuestions: updated });
+  userData.securityQuestions = updated;
+  toast('Security questions updated', 'success');
+  setLoading(btn, false, 'Update Questions');
+};
+
+window.saveImgPin = async () => {
+  if (newImgPin.length < 4) { toast('Select 4 images', 'danger'); return; }
+  const btn = document.getElementById('btnSaveImg');
+  setLoading(btn, true);
+  await updateUserDoc(auth.currentUser.uid, { imagePinOrder: newImgPin });
+  userData.imagePinOrder = newImgPin;
+  newImgPin = [];
+  renderImgGrid();
+  toast('Image PIN updated', 'success');
+  setLoading(btn, false, 'Save New Image PIN');
+};
+
+window.signOutAll = async () => {
+  if (!confirm('Sign out all devices? You will need to log in again.')) return;
+  await signOut(auth);
+  window.location.href = 'login.html';
+};
+
+window.clearLog = async () => {
+  if (!confirm('Permanently delete all security log entries?')) return;
+  const uid = auth.currentUser.uid;
+  const logRef = collection(db, 'astrolabuss_users', uid, 'security_log');
+  const snap = await getDocs(logRef);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  toast('Security log cleared', 'success');
+};
+
+window.deleteAccount = async () => {
+  if (!confirm('⚠️ PERMANENTLY delete your Astrolabuss account? This cannot be undone.')) return;
+  if (!confirm('Final confirmation: All your data will be erased forever.')) return;
+  const uid = auth.currentUser.uid;
+  // Delete Firestore data
+  const logRef = collection(db, 'astrolabuss_users', uid, 'security_log');
+  const snap = await getDocs(logRef);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  await deleteDoc(doc(db, 'astrolabuss_users', uid));
+  // Delete Firebase Auth user
+  await deleteUser(auth.currentUser);
+  window.location.href = 'signup.html';
+};
+
+window.doSignOut = async () => { await signOut(auth); window.location.href='login.html'; };
+</script>
+</body>
+</html>

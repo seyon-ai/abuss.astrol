@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Identity Card</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+.id-card-wrap { display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start; }
+.id-card-preview { flex-shrink:0; }
+.id-card-info { flex:1; min-width:280px; }
+.id-card {
+  background: linear-gradient(135deg, #0e0e18 0%, #13131f 50%, #0a0a14 100%);
+  border: 1px solid var(--gold-dim);
+  border-radius: 20px; padding: 32px;
+  position: relative; overflow: hidden;
+  width: 380px;
+  box-shadow: 0 0 60px rgba(201,168,76,0.15), inset 0 1px 0 rgba(201,168,76,0.2);
+}
+.id-card::before { content:''; position:absolute; inset:0; background:linear-gradient(135deg,rgba(201,168,76,0.05) 0%,transparent 60%); }
+.id-card-strip { position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,transparent,var(--gold),transparent); }
+.id-card-watermark { position:absolute; bottom:-20px; right:-20px; font-size:120px; opacity:0.04; font-family:'Cinzel',serif; pointer-events:none; }
+.id-card-chip { width:44px; height:32px; background:linear-gradient(135deg,var(--gold-dim),var(--gold)); border-radius:5px; margin-bottom:24px; box-shadow:0 2px 8px rgba(201,168,76,0.4); position:relative; z-index:1; }
+.id-card-name { font-family:'Cinzel',serif; font-size:22px; letter-spacing:3px; color:var(--gold-bright); margin-bottom:6px; position:relative; z-index:1; }
+.id-card-id { font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-sub); letter-spacing:1px; position:relative; z-index:1; word-break:break-all; }
+.id-card-footer { display:flex; justify-content:space-between; align-items:flex-end; margin-top:28px; position:relative; z-index:1; }
+.id-card-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim); }
+.id-card-val { font-size:12px; color:var(--text-sub); margin-top:3px; }
+.id-card-level { font-family:'Cinzel',serif; font-size:11px; letter-spacing:2px; color:var(--gold); }
+.id-logo { display:flex; align-items:center; gap:8px; margin-bottom:20px; position:relative; z-index:1; }
+.id-logo-sym { font-size:20px; filter:drop-shadow(0 0 10px rgba(201,168,76,0.6)); }
+.id-logo-text { font-family:'Cinzel',serif; font-size:13px; letter-spacing:4px; background:linear-gradient(135deg,var(--gold-bright),var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.qr-placeholder { width:60px; height:60px; background:white; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; color:#333; text-align:center; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<nav class="navbar">
+  <div class="navbar-brand"><a class="astro-logo" href="dashboard.html"><span class="astro-logo-sym">⟁</span><span class="astro-logo-text">Astrolabuss</span></a></div>
+  <div class="navbar-nav">
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">⊞</span> Dashboard</a>
+    <a class="nav-link" href="devices.html"><span class="nav-icon">💻</span> Devices</a>
+    <a class="nav-link" href="security-log.html"><span class="nav-icon">📋</span> Security Log</a>
+    <a class="nav-link active" href="id-card.html"><span class="nav-icon">🪪</span> ID Card</a>
+    <a class="nav-link" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="navUser" class="badge badge-gold"></span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <a class="sidebar-link" href="dashboard.html"><span class="sidebar-icon">⊞</span> Dashboard</a>
+      <a class="sidebar-link" href="devices.html"><span class="sidebar-icon">💻</span> Trusted Devices</a>
+      <a class="sidebar-link" href="security-log.html"><span class="sidebar-icon">📋</span> Security Log</a>
+      <a class="sidebar-link active" href="id-card.html"><span class="sidebar-icon">🪪</span> Identity Card</a>
+      <a class="sidebar-link" href="settings.html"><span class="sidebar-icon">⚙️</span> Settings</a>
+      <a class="sidebar-link" href="recovery.html"><span class="sidebar-icon">🔄</span> Recovery</a>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-title anim-fade-up">Identity Card</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:32px" class="anim-fade-up-d1">Your official Astrolabuss sovereign identity card.</div>
+
+    <div class="id-card-wrap">
+      <!-- ID Card Visual -->
+      <div class="id-card-preview anim-fade-up-d1">
+        <div class="id-card" id="idCard">
+          <div class="id-card-strip"></div>
+          <div class="id-card-watermark">⟁</div>
+          <div class="id-logo">
+            <span class="id-logo-sym">⟁</span>
+            <span class="id-logo-text">ASTROLABUSS</span>
+          </div>
+          <div class="id-card-chip"></div>
+          <div class="id-card-name" id="cardName">LOADING</div>
+          <div class="id-card-id" id="cardId">—</div>
+          <div class="id-card-footer">
+            <div>
+              <div class="id-card-label">Member Since</div>
+              <div class="id-card-val" id="cardSince">—</div>
+            </div>
+            <div>
+              <div class="id-card-label">Security Level</div>
+              <div class="id-card-level">MAXIMUM ⬡</div>
+            </div>
+            <div class="qr-placeholder">QR<br>Code</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-outline btn-sm" onclick="printCard()">🖨 Print</button>
+          <button class="btn btn-outline btn-sm" onclick="copyId()">📋 Copy ID</button>
+        </div>
+      </div>
+
+      <!-- ID Details -->
+      <div class="id-card-info anim-fade-up-d2">
+        <div class="card mb-16">
+          <div class="card-title mb-16">Account Details</div>
+          <div style="display:grid;gap:14px">
+            <div>
+              <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Astrolabuss ID</div>
+              <div class="astro-id-box" id="detailId">—</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div>
+                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Username</div>
+                <div style="font-size:14px;font-weight:600" id="detailUsername">—</div>
+              </div>
+              <div>
+                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Email</div>
+                <div style="font-size:13px;color:var(--text-sub)" id="detailEmail">—</div>
+              </div>
+              <div>
+                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Registered</div>
+                <div style="font-size:13px;color:var(--text-sub)" id="detailCreated">—</div>
+              </div>
+              <div>
+                <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px">Status</div>
+                <span class="badge badge-success" id="detailStatus">● Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title mb-16">Security Profile</div>
+          <div style="display:grid;gap:10px">
+            ${['Password Gate','Email OTP','Phone OTP','Authenticator','Security Questions','Image PIN','Device Check','Time Window'].map((g,i)=>`
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div style="font-size:13px">Gate ${i+1}: ${g}</div>
+                <span class="badge badge-success">✓ Active</span>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module">
+import { auth, getUserDoc, onAuthStateChanged, signOut, fmtDate, ASTRO_ID } from '../js/firebase.js';
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href='login.html'; return; }
+  const data = await getUserDoc(user.uid);
+  if (!data) { window.location.href='login.html'; return; }
+
+  document.getElementById('navUser').textContent = data.username;
+  document.getElementById('cardName').textContent = data.username.toUpperCase();
+  document.getElementById('cardId').textContent = data.astroId;
+  document.getElementById('cardSince').textContent = fmtDate(data.createdAt);
+  document.getElementById('detailId').textContent = data.astroId;
+  document.getElementById('detailUsername').textContent = data.username;
+  document.getElementById('detailEmail').textContent = data.email;
+  document.getElementById('detailCreated').textContent = fmtDate(data.createdAt);
+});
+
+window.copyId = () => {
+  const id = document.getElementById('cardId').textContent;
+  navigator.clipboard.writeText(id);
+  const { toast } = (async () => { const m = await import('../js/firebase.js'); m.toast('Astrolabuss ID copied!','success'); })();
+};
+
+window.printCard = () => window.print();
+window.doSignOut = async () => { const { signOut: so, auth: a } = await import('../js/firebase.js'); await so(a); window.location.href='login.html'; };
+</script>
+</body>
+</html>

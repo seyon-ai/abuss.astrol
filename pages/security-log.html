@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Security Log</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+.filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+.filter-btn { padding:6px 14px; border-radius:20px; font-size:11px; letter-spacing:1px; text-transform:uppercase; cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--text-sub); transition:all 0.2s; }
+.filter-btn:hover, .filter-btn.active { border-color:var(--gold-dim); color:var(--gold); background:var(--gold-glow); }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<nav class="navbar">
+  <div class="navbar-brand"><a class="astro-logo" href="dashboard.html"><span class="astro-logo-sym">⟁</span><span class="astro-logo-text">Astrolabuss</span></a></div>
+  <div class="navbar-nav">
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">⊞</span> Dashboard</a>
+    <a class="nav-link" href="devices.html"><span class="nav-icon">💻</span> Devices</a>
+    <a class="nav-link active" href="security-log.html"><span class="nav-icon">📋</span> Security Log</a>
+    <a class="nav-link" href="id-card.html"><span class="nav-icon">🪪</span> ID Card</a>
+    <a class="nav-link" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="navUser" class="badge badge-gold"></span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <a class="sidebar-link" href="dashboard.html"><span class="sidebar-icon">⊞</span> Dashboard</a>
+      <a class="sidebar-link" href="devices.html"><span class="sidebar-icon">💻</span> Trusted Devices</a>
+      <a class="sidebar-link active" href="security-log.html"><span class="sidebar-icon">📋</span> Security Log</a>
+      <a class="sidebar-link" href="id-card.html"><span class="sidebar-icon">🪪</span> Identity Card</a>
+      <a class="sidebar-link" href="settings.html"><span class="sidebar-icon">⚙️</span> Settings</a>
+      <a class="sidebar-link" href="recovery.html"><span class="sidebar-icon">🔄</span> Recovery</a>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-title anim-fade-up">Security Log</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:24px" class="anim-fade-up-d1">Complete audit trail of all security events on your account.</div>
+
+    <!-- Stats Row -->
+    <div class="stat-grid stat-grid-3 anim-fade-up-d1" style="margin-bottom:24px">
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Successful Logins</div>
+        <div class="stat-value" style="font-size:22px" id="statSuccess">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-label">Failed Attempts</div>
+        <div class="stat-value" style="font-size:22px;color:var(--danger)" id="statFail">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📋</div>
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value" style="font-size:22px" id="statTotal">—</div>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-bar anim-fade-up-d2">
+      <button class="filter-btn active" onclick="filterLog('all',this)">All Events</button>
+      <button class="filter-btn" onclick="filterLog('success',this)">✓ Success</button>
+      <button class="filter-btn" onclick="filterLog('danger',this)">✕ Failed</button>
+      <button class="filter-btn" onclick="filterLog('warn',this)">⚠ Warnings</button>
+    </div>
+
+    <!-- Log Table -->
+    <div class="card anim-fade-up-d2">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Event</th>
+              <th>Details</th>
+              <th>Device</th>
+              <th>Time</th>
+            </tr>
+          </thead>
+          <tbody id="logTable">
+            <tr><td colspan="5" style="color:var(--text-dim);text-align:center;padding:32px">Loading events...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <span style="font-size:12px;color:var(--text-dim)" id="logCount">—</span>
+        <button class="btn btn-outline btn-sm" onclick="loadMore()">Load More</button>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module">
+import { auth, db, getUserDoc, onAuthStateChanged, signOut, fmtDateTime, timeAgo, collection, query, orderBy, limit, getDocs } from '../js/firebase.js';
+
+let allEvents = [];
+let currentFilter = 'all';
+let pageLimit = 25;
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href='login.html'; return; }
+  const data = await getUserDoc(user.uid);
+  if (!data) { window.location.href='login.html'; return; }
+  document.getElementById('navUser').textContent = data.username;
+  await loadEvents(user.uid);
+});
+
+async function loadEvents(uid) {
+  const logRef = collection(db, 'astrolabuss_users', uid, 'security_log');
+  const q = query(logRef, orderBy('timestamp','desc'), limit(pageLimit));
+  const snap = await getDocs(q);
+  allEvents = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+
+  const success = allEvents.filter(e=>e.status==='success').length;
+  const fail    = allEvents.filter(e=>e.status==='danger').length;
+  document.getElementById('statSuccess').textContent = success;
+  document.getElementById('statFail').textContent = fail;
+  document.getElementById('statTotal').textContent = allEvents.length;
+  document.getElementById('logCount').textContent = `Showing ${allEvents.length} events`;
+
+  renderTable(allEvents);
+}
+
+function renderTable(events) {
+  const tbody = document.getElementById('logTable');
+  if (!events.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--text-dim);text-align:center;padding:32px">No events found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = events.map(e => {
+    const dotClass = e.status==='success'?'success':e.status==='danger'?'danger':e.status==='warn'?'warn':'info';
+    const badgeClass = e.status==='success'?'success':e.status==='danger'?'danger':'dim';
+    const ua = (e.userAgent||'').slice(0,40);
+    const time = e.timestamp ? timeAgo(e.timestamp) : '—';
+    return `<tr>
+      <td><span class="badge badge-${badgeClass}">${e.status==='success'?'✓ OK':e.status==='danger'?'✕ FAIL':'⚠ WARN'}</span></td>
+      <td style="font-weight:500;font-size:13px">${(e.action||'').replace(/_/g,' ')}</td>
+      <td style="color:var(--text-sub);font-size:12px;max-width:200px">${e.details||'—'}</td>
+      <td style="color:var(--text-dim);font-size:11px;font-family:'JetBrains Mono',monospace">${ua}...</td>
+      <td style="color:var(--text-dim);font-size:11px;white-space:nowrap;font-family:'JetBrains Mono',monospace">${time}</td>
+    </tr>`;
+  }).join('');
+}
+
+window.filterLog = (f, btn) => {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = f==='all' ? allEvents : allEvents.filter(e=>e.status===f);
+  renderTable(filtered);
+};
+
+window.loadMore = async () => {
+  pageLimit += 25;
+  const uid = auth.currentUser?.uid;
+  if (uid) await loadEvents(uid);
+};
+
+window.doSignOut = async () => { await signOut(auth); window.location.href='login.html'; };
+</script>
+</body>
+</html>

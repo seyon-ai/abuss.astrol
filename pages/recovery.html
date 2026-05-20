@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Account Recovery</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+.auth-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; position:relative; z-index:1; }
+.auth-card { width:100%; max-width:480px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:44px 40px; position:relative; overflow:hidden; box-shadow:var(--shadow),inset 0 1px 0 rgba(201,168,76,0.1); animation:fadeUp 0.5s ease both; }
+.auth-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:0.5; }
+.auth-logo { text-align:center; margin-bottom:28px; }
+.auth-logo-sym { font-size:36px; display:block; margin-bottom:8px; filter:drop-shadow(0 0 18px rgba(201,168,76,0.6)); animation:symPulse 3s ease-in-out infinite; }
+.auth-logo-name { font-family:'Cinzel',serif; font-size:18px; font-weight:700; letter-spacing:5px; text-transform:uppercase; background:linear-gradient(135deg,var(--gold-bright),var(--gold),var(--gold-dim)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.step-wrap { animation:slideR 0.28s ease both; }
+.option-card { display:flex; align-items:center; gap:14px; padding:16px; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; transition:all 0.2s; margin-bottom:10px; background:var(--surface2); }
+.option-card:hover { border-color:var(--gold-dim); background:rgba(201,168,76,0.04); }
+.option-icon { font-size:24px; width:40px; text-align:center; }
+.option-title { font-size:14px; font-weight:600; }
+.option-desc  { font-size:12px; color:var(--text-sub); margin-top:2px; }
+.option-arrow { margin-left:auto; color:var(--text-dim); }
+.back-link { text-align:center; margin-top:16px; font-size:12px; color:var(--text-sub); }
+.back-link a { color:var(--gold); text-decoration:none; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+
+<div class="auth-wrap">
+  <div style="width:100%;max-width:480px">
+    <div class="auth-logo">
+      <span class="auth-logo-sym">⟁</span>
+      <div class="auth-logo-name">Astrolabuss</div>
+    </div>
+    <div class="auth-card" id="recoveryCard"></div>
+    <div class="back-link"><a href="login.html">← Back to Sign In</a></div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  auth, db, getUserByUsername, hashText, SECURITY_QUESTIONS, toast, setLoading,
+  sendEmailVerification, getOTPValue, setupOTPInputs
+} from '../js/firebase.js';
+import { sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let step = 0;
+let recoveryMethod = '';
+let userDoc = null;
+let username = '';
+let sqStep = 0;
+
+function render() {
+  document.getElementById('recoveryCard').innerHTML = buildStep(step);
+  afterRender();
+}
+
+function nav(s) { step = s; render(); }
+
+function buildStep(s) {
+  switch(s) {
+
+    case 0: return `<div class="step-wrap">
+      <div style="font-family:'Cinzel',serif;font-size:20px;font-weight:600;margin-bottom:6px">Account Recovery</div>
+      <div style="font-size:13px;color:var(--text-sub);margin-bottom:24px;line-height:1.7">Choose how you'd like to recover your account. All methods require identity verification.</div>
+      <div class="option-card" onclick="chooseMethod('email')">
+        <div class="option-icon">📧</div>
+        <div><div class="option-title">Email Reset Link</div><div class="option-desc">Receive a password reset link to your recovery email</div></div>
+        <div class="option-arrow">→</div>
+      </div>
+      <div class="option-card" onclick="chooseMethod('secq')">
+        <div class="option-icon">🧩</div>
+        <div><div class="option-title">Security Questions</div><div class="option-desc">Answer all 3 of your secret questions to regain access</div></div>
+        <div class="option-arrow">→</div>
+      </div>
+      <div class="option-card" onclick="chooseMethod('totp')">
+        <div class="option-icon">🔑</div>
+        <div><div class="option-title">Authenticator App</div><div class="option-desc">Use your TOTP authenticator to verify your identity</div></div>
+        <div class="option-arrow">→</div>
+      </div>
+    </div>`;
+
+    case 1: return `<div class="step-wrap">
+      <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;margin-bottom:6px">Find Your Account</div>
+      <div style="font-size:13px;color:var(--text-sub);margin-bottom:24px">Enter your Astrolabuss username to begin recovery.</div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" id="inp_un" type="text" placeholder="yourname"
+          oninput="this.value=this.value.replace(/[^a-z]/g,'')">
+        <div class="form-error" id="err_un"></div>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnFind" onclick="findAccount()">Find Account →</button>
+    </div>`;
+
+    case 2: // Email recovery
+      return `<div class="step-wrap">
+        <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;margin-bottom:6px">Email Reset</div>
+        <div style="font-size:13px;color:var(--text-sub);margin-bottom:20px">A password reset link will be sent to the email associated with <strong style="color:var(--gold)">${username}</strong>.</div>
+        <div class="alert alert-info mb-16">The email will be sent to: <strong style="color:var(--gold)">${maskEmail(userDoc?.email||'')}</strong></div>
+        <button class="btn btn-primary btn-cinzel btn-full" id="btnSendReset" onclick="sendReset()">Send Reset Email →</button>
+      </div>`;
+
+    case 3: // Security Questions
+      const q = userDoc?.securityQuestions?.[sqStep]?.question || 'Loading...';
+      return `<div class="step-wrap">
+        <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;margin-bottom:6px">Question ${sqStep+1} of 3</div>
+        <div style="font-size:14px;color:var(--gold);margin-bottom:20px;font-weight:500;line-height:1.6">"${q}"</div>
+        <div class="form-group">
+          <label class="form-label">Your Answer</label>
+          <input class="form-input" id="inp_sq" type="text" placeholder="Case-sensitive answer">
+          <div class="form-error" id="err_sq"></div>
+        </div>
+        <button class="btn btn-primary btn-cinzel btn-full" id="btnSQ" onclick="verifySQ()">Verify →</button>
+        <div style="margin-top:10px;text-align:center;font-size:11px;color:var(--text-dim)">
+          Question ${sqStep+1} of 3 — Must pass all to proceed
+        </div>
+      </div>`;
+
+    case 4: // TOTP recovery
+      return `<div class="step-wrap">
+        <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;margin-bottom:6px">Authenticator Verify</div>
+        <div style="font-size:13px;color:var(--text-sub);margin-bottom:20px">Enter the 6-digit code from your authenticator app.</div>
+        <div class="otp-row mb-16">
+          ${[0,1,2,3,4,5].map(i=>`<input class="otp-cell" id="totp${i}" type="text" maxlength="1" inputmode="numeric">`).join('')}
+        </div>
+        <div class="form-error" id="err_totp"></div>
+        <button class="btn btn-primary btn-cinzel btn-full mt-8" id="btnTotp" onclick="verifyTOTPRec()">Verify →</button>
+      </div>`;
+
+    case 5: // Recovery success — new password
+      return `<div class="step-wrap">
+        <div style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;margin-bottom:6px">Identity Verified</div>
+        <div style="font-size:13px;color:var(--text-sub);margin-bottom:20px">Set a new master password for your account.</div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input class="form-input" id="inp_newpw" type="password" placeholder="New master password" oninput="checkPWRec(this.value)">
+          <div class="pw-bars mt-8" id="pwBars">
+            <div class="pw-bar" id="b1"></div><div class="pw-bar" id="b2"></div>
+            <div class="pw-bar" id="b3"></div><div class="pw-bar" id="b4"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <input class="form-input" id="inp_newpw2" type="password" placeholder="Repeat password">
+          <div class="form-error" id="err_newpw"></div>
+        </div>
+        <button class="btn btn-primary btn-cinzel btn-full" id="btnNewPW" onclick="setNewPW()">Set New Password →</button>
+      </div>`;
+
+    case 6: // Done
+      return `<div class="step-wrap" style="text-align:center;padding:10px 0">
+        <div style="font-size:56px;margin-bottom:16px;animation:scaleIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both">✅</div>
+        <div style="font-family:'Cinzel',serif;font-size:20px;color:var(--gold);margin-bottom:8px">Account Recovered</div>
+        <div style="font-size:13px;color:var(--text-sub);margin-bottom:24px;line-height:1.7">Your identity has been verified and your account is secured. You can now sign in.</div>
+        <a href="login.html" class="btn btn-primary btn-cinzel btn-full">Sign In Now →</a>
+      </div>`;
+
+    default: return '';
+  }
+}
+
+function afterRender() {
+  if (step === 4) setupOTPInputs('totp', 6);
+}
+
+function maskEmail(email) {
+  const [user, domain] = email.split('@');
+  return `${user.slice(0,2)}***@${domain}`;
+}
+
+window.chooseMethod = m => {
+  recoveryMethod = m;
+  nav(1);
+};
+
+window.findAccount = async () => {
+  const un = document.getElementById('inp_un')?.value.trim();
+  const err = document.getElementById('err_un');
+  if (!un) { err.textContent='Enter your username'; err.classList.add('show'); return; }
+  const btn = document.getElementById('btnFind');
+  setLoading(btn, true);
+  try {
+    const found = await getUserByUsername(un);
+    if (!found) { err.textContent='Account not found'; err.classList.add('show'); return; }
+    userDoc = found; username = un;
+    if (recoveryMethod === 'email') nav(2);
+    else if (recoveryMethod === 'secq') { sqStep=0; nav(3); }
+    else if (recoveryMethod === 'totp') nav(4);
+  } catch(e) { err.textContent=e.message; err.classList.add('show'); }
+  finally { setLoading(btn,false,'Find Account →'); }
+};
+
+window.sendReset = async () => {
+  const btn = document.getElementById('btnSendReset');
+  setLoading(btn, true);
+  try {
+    await sendPasswordResetEmail(auth, userDoc.email);
+    toast('Reset email sent!', 'success');
+    nav(6);
+  } catch(e) {
+    toast(e.message, 'danger');
+    setLoading(btn,false,'Send Reset Email →');
+  }
+};
+
+window.verifySQ = async () => {
+  const ans = document.getElementById('inp_sq')?.value.trim();
+  const err = document.getElementById('err_sq');
+  const btn = document.getElementById('btnSQ');
+  if (!ans) { err.textContent='Enter your answer'; err.classList.add('show'); return; }
+  setLoading(btn, true);
+  const hash = await hashText(ans);
+  const stored = userDoc?.securityQuestions?.[sqStep]?.answerHash;
+  if (hash !== stored) {
+    err.textContent='Incorrect answer. Recovery blocked.';
+    err.classList.add('show');
+    setLoading(btn,false,'Verify →');
+    return;
+  }
+  sqStep++;
+  if (sqStep >= 3) nav(5);
+  else nav(3);
+};
+
+window.verifyTOTPRec = async () => {
+  const { verifyTOTP } = await import('../js/firebase.js');
+  const code = getOTPValue('totp', 6);
+  const err = document.getElementById('err_totp');
+  if (code.length < 6) { err.textContent='Enter 6-digit code'; err.classList.add('show'); return; }
+  const ok = await verifyTOTP(userDoc.totpKey, code);
+  if (!ok) { err.textContent='Invalid code'; err.classList.add('show'); return; }
+  nav(5);
+};
+
+window.checkPWRec = v => {
+  const { checkPasswordStrength } = (async () => {
+    const m = await import('../js/firebase.js');
+    const {rules, level} = m.checkPasswordStrength(v);
+    const met = Object.values(rules).filter(Boolean).length;
+    [1,2,3,4].forEach(n => {
+      const b = document.getElementById(`b${n}`);
+      if (!b) return;
+      b.className = 'pw-bar';
+      if (n <= Math.ceil(met/2)) b.classList.add(level);
+    });
+  })();
+};
+
+window.setNewPW = async () => {
+  const pw  = document.getElementById('inp_newpw')?.value;
+  const pw2 = document.getElementById('inp_newpw2')?.value;
+  const err = document.getElementById('err_newpw');
+  if (!pw || pw.length < 12) { err.textContent='Password too short (min 12)'; err.classList.add('show'); return; }
+  if (pw !== pw2) { err.textContent='Passwords do not match'; err.classList.add('show'); return; }
+  // In production: use Firebase Admin or re-auth to reset password
+  // For now, send reset email as the secure path
+  try {
+    await sendPasswordResetEmail(auth, userDoc.email);
+    toast('Password reset email sent — check inbox to finalize', 'success');
+    nav(6);
+  } catch(e) {
+    toast(e.message, 'danger');
+  }
+};
+
+render();
+</script>
+</body>
+</html>

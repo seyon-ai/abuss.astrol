@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Sovereign Identity Protocol</title>
+<link rel="stylesheet" href="css/astro.css">
+<style>
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  position: relative; z-index: 1;
+}
+.hero-sym {
+  font-size: 72px; margin-bottom: 24px;
+  display: block;
+  filter: drop-shadow(0 0 40px rgba(201,168,76,0.7));
+  animation: symPulse 3s ease-in-out infinite, fadeDown 0.7s ease both;
+}
+.hero-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(32px, 6vw, 64px);
+  font-weight: 900; letter-spacing: 8px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold-dim) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+  animation: fadeUp 0.7s ease both 0.1s;
+}
+.hero-sub {
+  font-size: clamp(13px, 2vw, 16px);
+  color: var(--text-sub); letter-spacing: 4px;
+  text-transform: uppercase; margin-bottom: 48px;
+  animation: fadeUp 0.7s ease both 0.2s;
+}
+.hero-actions {
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+  margin-bottom: 72px;
+  animation: fadeUp 0.7s ease both 0.3s;
+}
+.hero-features {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 16px; max-width: 860px; width: 100%;
+  animation: fadeUp 0.7s ease both 0.4s;
+}
+@media(max-width: 700px) { .hero-features { grid-template-columns: 1fr; } }
+.feat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 20px; text-align: left;
+  transition: all 0.2s;
+  position: relative; overflow: hidden;
+}
+.feat-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  opacity:0;
+  transition: opacity 0.3s;
+}
+.feat-card:hover { border-color: var(--border2); transform: translateY(-3px); }
+.feat-card:hover::before { opacity: 0.5; }
+.feat-icon { font-size: 28px; margin-bottom: 12px; display: block; }
+.feat-title { font-family: 'Cinzel', serif; font-size: 14px; font-weight: 600; letter-spacing: 1px; margin-bottom: 6px; }
+.feat-desc { font-size: 12px; color: var(--text-sub); line-height: 1.7; }
+
+.gates-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  justify-content: center; margin-bottom: 56px;
+  animation: fadeUp 0.7s ease both 0.35s;
+}
+.gate-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 11px; letter-spacing: 1px;
+  color: var(--text-sub); transition: all 0.2s;
+}
+.gate-pill:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+.divider-line {
+  width: 1px; height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--border2), transparent);
+  margin: 0 8px;
+}
+
+.footer-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+  height: 48px;
+  background: rgba(6,6,10,0.9);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  gap: 32px;
+  font-size: 11px; letter-spacing: 1px; color: var(--text-dim);
+}
+.footer-bar span { display: flex; align-items: center; gap: 6px; }
+.footer-bar a { color: var(--gold-dim); text-decoration: none; }
+.footer-bar a:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<div class="bg-orb orb-teal"></div>
+
+<div class="hero">
+  <span class="hero-sym">⟁</span>
+  <h1 class="hero-title">Astrolabuss</h1>
+  <p class="hero-sub">Sovereign Identity Protocol · Maximum Security</p>
+
+  <!-- Gate pills -->
+  <div class="gates-row">
+    <div class="gate-pill">🛡️ Password</div>
+    <div class="gate-pill">📧 Email OTP</div>
+    <div class="gate-pill">📱 SMS OTP</div>
+    <div class="gate-pill">🔑 Authenticator</div>
+    <div class="gate-pill">🧩 Secret Questions</div>
+    <div class="gate-pill">🖼️ Image PIN</div>
+    <div class="gate-pill">💻 Device Check</div>
+    <div class="gate-pill">⏱️ Time Window</div>
+  </div>
+
+  <!-- CTA Buttons -->
+  <div class="hero-actions">
+    <a href="pages/signup.html" class="btn btn-primary btn-cinzel" style="padding:16px 36px;font-size:13px">
+      Create Identity →
+    </a>
+    <a href="pages/login.html" class="btn btn-outline" style="padding:16px 36px;font-size:13px;letter-spacing:2px">
+      Sign In
+    </a>
+  </div>
+
+  <!-- Feature Cards -->
+  <div class="hero-features">
+    <div class="feat-card">
+      <span class="feat-icon">🔐</span>
+      <div class="feat-title">8-Gate Security</div>
+      <div class="feat-desc">Every login passes through 8 independent verification layers. No shortcuts, no bypass.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🌐</span>
+      <div class="feat-title">Universal Identity</div>
+      <div class="feat-desc">One Astrolabuss ID works across all connected platforms. One account, everywhere.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🔒</span>
+      <div class="feat-title">End-to-End Encrypted</div>
+      <div class="feat-desc">All sensitive data is hashed and encrypted. Security questions stored as SHA-256 hashes.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">📱</span>
+      <div class="feat-title">Firebase Phone Auth</div>
+      <div class="feat-desc">Real-time SMS OTP via Firebase Phone Auth. No third-party SMS fees required.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🕐</span>
+      <div class="feat-title">Time-Locked Access</div>
+      <div class="feat-desc">Restrict your account to specific login hours. Zero access outside your window.</div>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🪪</span>
+      <div class="feat-title">Sovereign ID Card</div>
+      <div class="feat-desc">A digital identity card with your unique Astrolabuss ID, printable and shareable.</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <span>⟁ Astrolabuss Protocol</span>
+  <span>·</span>
+  <span><a href="pages/signup.html">Create Account</a></span>
+  <span>·</span>
+  <span><a href="pages/login.html">Sign In</a></span>
+  <span>·</span>
+  <span><a href="pages/recovery.html">Recovery</a></span>
+</div>
+
+<script type="module">
+import { auth, onAuthStateChanged } from './js/firebase.js';
+// If already logged in, redirect to dashboard
+onAuthStateChanged(auth, user => {
+  if (user) window.location.href = 'pages/dashboard.html';
+});
+</script>
+</body>
+</html>

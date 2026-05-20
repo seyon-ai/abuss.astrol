@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Create Account</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+.auth-wrap {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px;
+  position: relative; z-index: 1;
+}
+.auth-card {
+  width: 100%; max-width: 460px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 44px 40px;
+  position: relative; overflow: hidden;
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(201,168,76,0.1);
+  animation: fadeUp 0.5s ease both;
+}
+.auth-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.5;
+}
+.auth-logo {
+  text-align: center; margin-bottom: 32px;
+  animation: fadeDown 0.5s ease both;
+}
+.auth-logo-sym {
+  font-size: 38px; display: block; margin-bottom: 10px;
+  filter: drop-shadow(0 0 20px rgba(201,168,76,0.6));
+  animation: symPulse 3s ease-in-out infinite;
+}
+.auth-logo-name {
+  font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700;
+  letter-spacing: 6px; text-transform: uppercase;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold), var(--gold-dim));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.auth-logo-tag {
+  font-size: 10px; letter-spacing: 3px; color: var(--text-dim);
+  text-transform: uppercase; margin-top: 4px;
+}
+.step-wrap { animation: slideR 0.28s ease both; }
+.step-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.back-btn {
+  width: 32px; height: 32px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text-sub); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: all 0.2s;
+}
+.back-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+.step-info { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-sub); }
+.step-info span { color: var(--gold); }
+.step-title { font-family:'Cinzel',serif; font-size:20px; font-weight:600; margin-bottom:6px; }
+.step-sub { font-size:13px; color:var(--text-sub); margin-bottom:24px; line-height:1.7; }
+.sec-chip {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.2);
+  border-radius:20px; padding:4px 12px;
+  font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--gold);
+  margin-bottom:20px;
+}
+.id-preview {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 13px 16px;
+  font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold);
+  letter-spacing:0.5px; word-break:break-all; margin: 12px 0 20px;
+  transition: border-color 0.2s;
+}
+.auth-switch {
+  text-align:center; margin-top:20px; font-size:13px; color:var(--text-sub);
+}
+.auth-switch a { color:var(--gold); cursor:pointer; text-decoration:none; font-weight:500; }
+.auth-switch a:hover { color:var(--gold-bright); }
+.success-screen { text-align:center; padding:10px 0; }
+.success-sym { font-size:60px; margin-bottom:16px; display:block; animation: scaleIn 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+.success-title { font-family:'Cinzel',serif; font-size:22px; color:var(--gold); margin-bottom:8px; }
+.success-sub { font-size:13px; color:var(--text-sub); line-height:1.7; }
+.success-id {
+  background:var(--surface2); border:1px solid var(--border2);
+  border-radius:var(--radius-sm); padding:12px 16px;
+  font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold);
+  margin:20px 0; word-break:break-all;
+}
+.sec-level {
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--success);
+}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<div class="bg-orb orb-teal"></div>
+
+<div class="auth-wrap">
+  <div>
+    <div class="auth-logo">
+      <span class="auth-logo-sym">⟁</span>
+      <div class="auth-logo-name">Astrolabuss</div>
+      <div class="auth-logo-tag">Sovereign Identity Protocol</div>
+    </div>
+    <div class="auth-card" id="authCard"></div>
+    <div class="auth-switch" id="authSwitch">
+      Already have an account? <a href="login.html">Sign In</a>
+    </div>
+  </div>
+</div>
+
+<div id="recaptcha-container"></div>
+
+<script type="module">
+import {
+  auth, db, ASTRO_ID, SECURITY_QUESTIONS, IMAGE_TILES,
+  generateTOTPKey, formatTOTPKey, verifyTOTP, checkPasswordStrength,
+  setupOTPInputs, getOTPValue, getDeviceFingerprint, getDeviceLabel,
+  hashText, toast, setLoading,
+  createUserWithEmailAndPassword, updateProfile, sendEmailVerification,
+  RecaptchaVerifier, signInWithPhoneNumber,
+  setDoc, doc, serverTimestamp, collection, addDoc
+} from '../js/firebase.js';
+
+// ── STATE ──
+let step = 0;
+const TOTAL = 10;
+let confirmResult = null;
+let recaptchaVerifier = null;
+
+const state = {
+  username: '', email: '', phone: '', password: '',
+  totpKey: '', emailVerified: false, phoneVerified: false,
+  secQ: [{q:'',a:''},{q:'',a:''},{q:'',a:''}],
+  imgPin: [],
+  loginWindow: {start:'00:00', end:'23:59'},
+  trustDevice: true,
+  uid: null
+};
+
+// ── RENDER ──
+function render() {
+  const card = document.getElementById('authCard');
+  card.innerHTML = buildStep(step);
+  afterRender();
+}
+
+function nav(s, back=false) {
+  const dotsEl = document.querySelector('.step-dots');
+  if (dotsEl) dotsEl.animate([{opacity:1},{opacity:0}],{duration:150}).onfinish = () => { step = s; render(); };
+  else { step = s; render(); }
+}
+
+function progressHTML() {
+  const pct = Math.round((step / (TOTAL-1)) * 100);
+  let dots = '';
+  for (let i=0; i<TOTAL; i++) {
+    let c = i < step ? 'done' : i===step ? 'active' : '';
+    dots += `<div class="step-dot ${c}"></div>`;
+  }
+  return `
+    <div class="step-nav">
+      <button class="back-btn ${step===0?'hidden':''}" onclick="goBack()">←</button>
+      <div class="step-dots">${dots}</div>
+      <div class="step-info">Step <span>${step+1}</span>/${TOTAL}</div>
+    </div>
+    <div class="progress mb-24" style="margin-bottom:28px">
+      <div class="progress-fill" style="width:${pct}%"></div>
+    </div>`;
+}
+
+function buildStep(s) {
+  const p = progressHTML();
+  switch(s) {
+
+    case 0: return `${p}<div class="step-wrap">
+      <div class="sec-chip">🔐 8-Layer Security Protocol</div>
+      <div class="step-title">Create Your Identity</div>
+      <div class="step-sub">Choose your Astrolabuss username. Letters and lowercase only.</div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" id="inp_un" type="text" placeholder="yourname" maxlength="24"
+          value="${state.username}" oninput="this.value=this.value.replace(/[^a-z]/g,'');updatePreview(this.value)">
+        <div class="form-error" id="err_un"></div>
+      </div>
+      <div class="id-preview" id="idPreview">${state.username ? ASTRO_ID(state.username) : 'yourname.astrol.abussΩsecure.protocol'}</div>
+      <button class="btn btn-primary btn-cinzel btn-full" onclick="s0Next()">Continue →</button>
+    </div>`;
+
+    case 1: return `${p}<div class="step-wrap">
+      <div class="sec-chip">🛡️ Master Password</div>
+      <div class="step-title">Set Master Password</div>
+      <div class="step-sub">Must pass all 8 strength requirements. This is your primary gate.</div>
+      <div class="form-group">
+        <label class="form-label">Master Password</label>
+        <input class="form-input" id="inp_pw" type="password" placeholder="Create a powerful password" oninput="checkPW(this.value)">
+        <div class="pw-bars mt-8" id="pwBars">
+          <div class="pw-bar" id="b1"></div><div class="pw-bar" id="b2"></div>
+          <div class="pw-bar" id="b3"></div><div class="pw-bar" id="b4"></div>
+        </div>
+        <div class="pw-rules mt-8">
+          <div class="pw-rule" id="r_len12">Min 12 chars</div>
+          <div class="pw-rule" id="r_upper">Uppercase</div>
+          <div class="pw-rule" id="r_lower">Lowercase</div>
+          <div class="pw-rule" id="r_num">Number</div>
+          <div class="pw-rule" id="r_sym">Special symbol</div>
+          <div class="pw-rule" id="r_nodict">No common words</div>
+          <div class="pw-rule" id="r_norep">No repeated chars</div>
+          <div class="pw-rule" id="r_len16">Power (16+ chars)</div>
+        </div>
+      </div>
+      <div class="form-group mt-16">
+        <label class="form-label">Confirm Password</label>
+        <input class="form-input" id="inp_pw2" type="password" placeholder="Repeat your password">
+        <div class="form-error" id="err_pw"></div>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full mt-8" onclick="s1Next()">Continue →</button>
+    </div>`;
+
+    case 2: return `${p}<div class="step-wrap">
+      <div class="sec-chip">📧 Recovery Email</div>
+      <div class="step-title">Recovery Email</div>
+      <div class="step-sub">Used for email OTP on every login. A verification link will be sent.</div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input class="form-input" id="inp_email" type="email" placeholder="you@example.com" value="${state.email}">
+        <div class="form-error" id="err_email"></div>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnEmail" onclick="s2Next()">Send Verification →</button>
+    </div>`;
+
+    case 3: return `${p}<div class="step-wrap">
+      <div class="sec-chip">📧 Verify Email</div>
+      <div class="step-title">Check Your Inbox</div>
+      <div class="step-sub">A verification link was sent to <strong style="color:var(--gold)">${state.email}</strong>. Click the link then return here.</div>
+      <div class="alert alert-info mb-16">After clicking the link in your email, press the button below to confirm.</div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnEmailCheck" onclick="s3Next()">I've Verified My Email →</button>
+      <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--text-dim)">
+        Didn't get it? <a style="color:var(--gold);cursor:pointer" onclick="resendEmail()">Resend link</a>
+      </div>
+    </div>`;
+
+    case 4: return `${p}<div class="step-wrap">
+      <div class="sec-chip">📱 Phone Verification</div>
+      <div class="step-title">Add Phone Number</div>
+      <div class="step-sub">For SMS OTP verification on every login via Firebase Phone Auth.</div>
+      <div class="form-group">
+        <label class="form-label">Phone Number (with country code)</label>
+        <input class="form-input" id="inp_phone" type="tel" placeholder="+1 234 567 8900" value="${state.phone}">
+        <div class="form-hint">Include country code e.g. +1, +44, +91</div>
+        <div class="form-error" id="err_phone"></div>
+      </div>
+      <div id="recaptcha-container-inner"></div>
+      <button class="btn btn-primary btn-cinzel btn-full mt-8" id="btnPhone" onclick="s4Next()">Send SMS Code →</button>
+    </div>`;
+
+    case 5: return `${p}<div class="step-wrap">
+      <div class="sec-chip">📱 Verify Phone</div>
+      <div class="step-title">Enter SMS Code</div>
+      <div class="step-sub">Code sent to <strong style="color:var(--gold)">${state.phone}</strong></div>
+      <div class="otp-row mb-16">
+        ${[0,1,2,3,4,5].map(i=>`<input class="otp-cell" id="sms${i}" type="text" maxlength="1" inputmode="numeric">`).join('')}
+      </div>
+      <div style="text-align:center;margin-bottom:16px;font-size:12px;color:var(--text-dim)">
+        <a style="color:var(--gold);cursor:pointer" onclick="goBack()">← Change number</a>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnSms" onclick="s5Next()">Verify Phone →</button>
+    </div>`;
+
+    case 6: return `${p}<div class="step-wrap">
+      <div class="sec-chip">🔑 Authenticator App</div>
+      <div class="step-title">Set Up Authenticator</div>
+      <div class="step-sub">Scan with Google Authenticator, Authy, or any TOTP app. Then enter the 6-digit code to confirm.</div>
+      <div class="totp-qr">📱<br><small style="font-size:9px;color:#555">QR Code<br>Scan or enter key</small></div>
+      <div class="totp-key" id="totpKeyDisplay">${formatTOTPKey(state.totpKey)}</div>
+      <div class="form-group">
+        <label class="form-label">Confirm — Enter 6-digit code</label>
+        <div class="otp-row">
+          ${[0,1,2,3,4,5].map(i=>`<input class="otp-cell" id="totp${i}" type="text" maxlength="1" inputmode="numeric">`).join('')}
+        </div>
+        <div class="form-error" id="err_totp"></div>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full mt-8" id="btnTotp" onclick="s6Next()">Confirm Setup →</button>
+    </div>`;
+
+    case 7: return `${p}<div class="step-wrap">
+      <div class="sec-chip">🧩 Security Questions</div>
+      <div class="step-title">3 Secret Questions</div>
+      <div class="step-sub">One will be asked randomly on every login. Answers are case-sensitive.</div>
+      ${[0,1,2].map(i=>`
+        <div class="form-group">
+          <label class="form-label">Question ${i+1}</label>
+          <select class="form-input" id="q${i}" onchange="setQ(${i},this.value)">
+            <option value="">— Select a question —</option>
+            ${SECURITY_QUESTIONS.map(q=>`<option value="${q}" ${state.secQ[i].q===q?'selected':''}>${q}</option>`).join('')}
+          </select>
+          <input class="form-input mt-8" type="text" id="a${i}" placeholder="Your answer" value="${state.secQ[i].a}" oninput="setA(${i},this.value)">
+        </div>`).join('')}
+      <button class="btn btn-primary btn-cinzel btn-full" onclick="s7Next()">Continue →</button>
+    </div>`;
+
+    case 8: return `${p}<div class="step-wrap">
+      <div class="sec-chip">🖼️ Visual PIN</div>
+      <div class="step-title">Image PIN</div>
+      <div class="step-sub">Select exactly 4 images in a specific order. This order becomes your visual PIN.</div>
+      <div class="img-grid" id="imgGrid">
+        ${IMAGE_TILES.map((img,i)=>{
+          const oi = state.imgPin.indexOf(i);
+          const sel = oi !== -1;
+          return `<div class="img-tile${sel?' selected':''}" onclick="toggleImg(${i})" id="tile${i}">
+            ${img}${sel?`<div class="img-order">${oi+1}</div>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="text-align:center;font-size:11px;color:var(--text-sub);margin-bottom:16px" id="imgHint">
+        Selected: ${state.imgPin.length} / 4
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnImg" onclick="s8Next()" ${state.imgPin.length<4?'disabled':''}>Continue →</button>
+    </div>`;
+
+    case 9: return `${p}<div class="step-wrap">
+      <div class="sec-chip">⏱️ Final Layer</div>
+      <div class="step-title">Access Window & Device</div>
+      <div class="step-sub">Restrict logins to specific hours and register this device as trusted.</div>
+      <div class="form-group">
+        <label class="form-label">Allowed Login Hours</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label" style="font-size:10px">From</label>
+            <input class="form-input" type="time" id="tw_start" value="${state.loginWindow.start}" oninput="state.loginWindow.start=this.value">
+          </div>
+          <div>
+            <label class="form-label" style="font-size:10px">Until</label>
+            <input class="form-input" type="time" id="tw_end" value="${state.loginWindow.end}" oninput="state.loginWindow.end=this.value">
+          </div>
+        </div>
+        <div class="form-hint">Set 00:00–23:59 to allow all hours</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Trusted Device</label>
+        <div class="device-card trusted" id="devCard" onclick="toggleDev()">
+          <div class="device-icon">${getDeviceLabel().split(' ')[0]}</div>
+          <div class="device-info">
+            <div class="device-name">${getDeviceLabel().slice(2)}</div>
+            <div class="device-meta">${navigator.platform} · Registering now</div>
+          </div>
+          <div class="toggle on" id="devToggle"></div>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-cinzel btn-full" id="btnFinal" onclick="s9Next()">Create Account →</button>
+    </div>`;
+
+    default: return '';
+  }
+}
+
+function afterRender() {
+  if (step === 6 && state.totpKey) {
+    const el = document.getElementById('totpKeyDisplay');
+    if (el) el.textContent = formatTOTPKey(state.totpKey);
+    setupOTPInputs('totp', 6);
+  }
+  if (step === 5) setupOTPInputs('sms', 6);
+}
+
+// ── STEP HANDLERS ──
+window.updatePreview = v => {
+  const el = document.getElementById('idPreview');
+  if (el) el.textContent = v ? ASTRO_ID(v) : 'yourname.astrol.abussΩsecure.protocol';
+};
+
+window.goBack = () => { if (step > 0) nav(step - 1, true); };
+
+window.s0Next = () => {
+  const un = document.getElementById('inp_un')?.value.trim();
+  const err = document.getElementById('err_un');
+  if (!un || un.length < 3) { err.textContent='Min 3 letters required'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  state.username = un;
+  nav(1);
+};
+
+window.checkPW = v => {
+  const {rules, level} = checkPasswordStrength(v);
+  const map = {r_len12:'len12',r_upper:'upper',r_lower:'lower',r_num:'num',r_sym:'sym',r_nodict:'noDict',r_norep:'noRepeat',r_len16:'len16'};
+  Object.entries(map).forEach(([id,k]) => document.getElementById(id)?.classList.toggle('met', rules[k]));
+  const met = Object.values(rules).filter(Boolean).length;
+  [1,2,3,4].forEach(n => {
+    const b = document.getElementById(`b${n}`);
+    if (!b) return;
+    b.className = 'pw-bar';
+    if (n <= Math.ceil(met/2)) b.classList.add(level);
+  });
+};
+
+window.s1Next = () => {
+  const pw  = document.getElementById('inp_pw')?.value;
+  const pw2 = document.getElementById('inp_pw2')?.value;
+  const err = document.getElementById('err_pw');
+  const {score} = checkPasswordStrength(pw||'');
+  if (score < 5) { err.textContent='Password too weak — pass more rules'; err.classList.add('show'); return; }
+  if (pw !== pw2) { err.textContent='Passwords do not match'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  state.password = pw;
+  nav(2);
+};
+
+window.s2Next = async () => {
+  const email = document.getElementById('inp_email')?.value.trim();
+  const err = document.getElementById('err_email');
+  if (!email || !email.includes('@')) { err.textContent='Enter a valid email'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  state.email = email;
+  const btn = document.getElementById('btnEmail');
+  setLoading(btn, true);
+  try {
+    // Create Firebase user so we can send verification email
+    const cred = await createUserWithEmailAndPassword(auth, email, state.password);
+    state.uid = cred.user.uid;
+    await sendEmailVerification(cred.user);
+    toast('Verification email sent!', 'success');
+    nav(3);
+  } catch(e) {
+    err.textContent = e.code === 'auth/email-already-in-use' ? 'Email already registered' : e.message;
+    err.classList.add('show');
+  } finally { setLoading(btn, false, 'Send Verification →'); }
+};
+
+window.resendEmail = async () => {
+  if (auth.currentUser) {
+    await sendEmailVerification(auth.currentUser);
+    toast('Verification email resent', 'success');
+  }
+};
+
+window.s3Next = async () => {
+  const btn = document.getElementById('btnEmailCheck');
+  setLoading(btn, true);
+  try {
+    await auth.currentUser.reload();
+    if (!auth.currentUser.emailVerified) {
+      toast('Email not verified yet. Check your inbox.', 'danger');
+      setLoading(btn, false, "I've Verified My Email →");
+      return;
+    }
+    state.emailVerified = true;
+    toast('Email verified!', 'success');
+    nav(4);
+  } catch(e) {
+    toast(e.message, 'danger');
+    setLoading(btn, false, "I've Verified My Email →");
+  }
+};
+
+window.s4Next = async () => {
+  const phone = document.getElementById('inp_phone')?.value.trim();
+  const err = document.getElementById('err_phone');
+  if (!phone || phone.length < 8) { err.textContent='Enter a valid phone with country code'; err.classList.add('show'); return; }
+  err.classList.remove('show');
+  state.phone = phone;
+  const btn = document.getElementById('btnPhone');
+  setLoading(btn, true);
+  try {
+    if (!recaptchaVerifier) {
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container-inner', { size:'invisible' });
+    }
+    confirmResult = await signInWithPhoneNumber(auth, phone, recaptchaVerifier);
+    toast('SMS code sent!', 'success');
+    nav(5);
+  } catch(e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+    recaptchaVerifier = null;
+  } finally { setLoading(btn, false, 'Send SMS Code →'); }
+};
+
+window.s5Next = async () => {
+  const code = getOTPValue('sms', 6);
+  const btn = document.getElementById('btnSms');
+  if (code.length < 6) { toast('Enter complete 6-digit code', 'danger'); return; }
+  setLoading(btn, true);
+  try {
+    await confirmResult.confirm(code);
+    state.phoneVerified = true;
+    toast('Phone verified!', 'success');
+    // Generate TOTP key now
+    state.totpKey = await generateTOTPKey();
+    nav(6);
+  } catch(e) {
+    toast('Invalid code. Try again.', 'danger');
+  } finally { setLoading(btn, false, 'Verify Phone →'); }
+};
+
+window.s6Next = async () => {
+  const code = getOTPValue('totp', 6);
+  const err = document.getElementById('err_totp');
+  if (code.length < 6) { err.textContent='Enter the 6-digit code from your app'; err.classList.add('show'); return; }
+  const btn = document.getElementById('btnTotp');
+  setLoading(btn, true);
+  const ok = await verifyTOTP(state.totpKey, code);
+  if (!ok) {
+    err.textContent='Invalid code. Make sure your app is synced.';
+    err.classList.add('show');
+    setLoading(btn, false, 'Confirm Setup →');
+    return;
+  }
+  err.classList.remove('show');
+  toast('Authenticator confirmed!', 'success');
+  nav(7);
+};
+
+window.setQ = (i, v) => { state.secQ[i].q = v; };
+window.setA = (i, v) => { state.secQ[i].a = v; };
+
+window.s7Next = () => {
+  for (let i=0; i<3; i++) {
+    if (!state.secQ[i].q || !state.secQ[i].a.trim()) {
+      toast(`Complete Security Question ${i+1}`, 'danger');
+      return;
+    }
+  }
+  nav(8);
+};
+
+window.toggleImg = (i) => {
+  const idx = state.imgPin.indexOf(i);
+  if (idx !== -1) state.imgPin.splice(idx, 1);
+  else if (state.imgPin.length < 4) state.imgPin.push(i);
+  // Re-render just the grid section
+  document.querySelector('.step-wrap').innerHTML = document.querySelector('.step-wrap').innerHTML;
+  render();
+};
+
+window.s8Next = () => {
+  if (state.imgPin.length < 4) { toast('Select exactly 4 images', 'danger'); return; }
+  nav(9);
+};
+
+window.toggleDev = () => {
+  state.trustDevice = !state.trustDevice;
+  document.getElementById('devCard')?.classList.toggle('trusted', state.trustDevice);
+  document.getElementById('devToggle')?.classList.toggle('on', state.trustDevice);
+};
+
+window.s9Next = async () => {
+  const btn = document.getElementById('btnFinal');
+  setLoading(btn, true);
+  try {
+    const uid = state.uid || auth.currentUser?.uid;
+    if (!uid) throw new Error('Session expired. Please restart.');
+
+    // Hash security question answers
+    const hashedQ = await Promise.all(state.secQ.map(async q => ({
+      question: q.q,
+      answerHash: await hashText(q.a)
+    })));
+
+    await setDoc(doc(db, 'astrolabuss_users', uid), {
+      astroId:       ASTRO_ID(state.username),
+      username:      state.username,
+      email:         state.email,
+      phone:         state.phone,
+      totpKey:       state.totpKey,
+      securityQuestions: hashedQ,
+      imagePinOrder: state.imgPin,
+      loginWindow:   state.loginWindow,
+      trustedDevices: state.trustDevice ? [JSON.stringify(getDeviceFingerprint())] : [],
+      createdAt:     serverTimestamp(),
+      lastLogin:     null,
+      loginCount:    0,
+      securityLevel: 'MAXIMUM',
+      accountStatus: 'active'
+    });
+
+    await updateProfile(auth.currentUser, { displayName: ASTRO_ID(state.username) });
+
+    // Log creation event
+    await addDoc(collection(db, 'astrolabuss_users', uid, 'security_log'), {
+      action: 'ACCOUNT_CREATED',
+      details: 'New Astrolabuss account created with 8-layer security',
+      status: 'success',
+      timestamp: serverTimestamp(),
+      userAgent: navigator.userAgent
+    });
+
+    // Show success
+    document.getElementById('authCard').innerHTML = `
+      <div class="success-screen anim-fade-up">
+        <span class="success-sym">⟁</span>
+        <div class="success-title">Identity Created</div>
+        <div class="success-sub">Your sovereign Astrolabuss identity is now active and protected by 8 security layers.</div>
+        <div class="success-id">${ASTRO_ID(state.username)}</div>
+        <div class="sec-level mb-24">⬡ Maximum Security Active</div>
+        <a href="login.html" class="btn btn-primary btn-cinzel btn-full">Sign In Now →</a>
+      </div>`;
+    document.getElementById('authSwitch').innerHTML = '';
+
+  } catch(e) {
+    toast(e.message, 'danger');
+    setLoading(btn, false, 'Create Account →');
+  }
+};
+
+// ── INIT ──
+(async () => { render(); })();
+</script>
+</body>
+</html>

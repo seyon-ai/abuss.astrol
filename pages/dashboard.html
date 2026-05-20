@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Dashboard</title>
+<link rel="stylesheet" href="../css/astro.css">
+<style>
+body { background: var(--bg); }
+.page-title { font-family:'Cinzel',serif; font-size:26px; font-weight:700; margin-bottom:4px; }
+.page-sub { font-size:14px; color:var(--text-sub); margin-bottom:32px; }
+.welcome-card {
+  background: linear-gradient(135deg, var(--surface) 0%, #111118 100%);
+  border: 1px solid var(--border2);
+  border-radius: 20px; padding: 32px 36px;
+  position: relative; overflow: hidden; margin-bottom: 24px;
+}
+.welcome-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+.welcome-card-bg {
+  position:absolute; right:-20px; bottom:-20px;
+  font-size:140px; opacity:0.03; font-family:'Cinzel',serif;
+  pointer-events:none;
+}
+.welcome-name { font-family:'Cinzel',serif; font-size:28px; font-weight:700; margin-bottom:4px; }
+.welcome-id { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text-sub); margin-bottom:16px; word-break:break-all; }
+.sec-score-wrap { margin-top:20px; }
+.sec-score-label { display:flex; justify-content:space-between; margin-bottom:6px; }
+.sec-score-title { font-size:12px; color:var(--text-sub); }
+.sec-score-val { font-size:12px; color:var(--success); font-weight:600; }
+.quick-actions { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+.qa-btn {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:18px 16px;
+  text-align:center; cursor:pointer; transition:all 0.2s;
+  text-decoration:none; display:block;
+}
+.qa-btn:hover { border-color:var(--gold-dim); background:var(--surface2); transform:translateY(-2px); }
+.qa-icon { font-size:24px; margin-bottom:8px; display:block; }
+.qa-label { font-size:12px; color:var(--text-sub); font-weight:500; }
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+.three-col { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-bottom:24px; }
+@media(max-width:900px){ .quick-actions{grid-template-columns:1fr 1fr;} .two-col,.three-col{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a class="astro-logo" href="dashboard.html">
+      <span class="astro-logo-sym">⟁</span>
+      <span class="astro-logo-text">Astrolabuss</span>
+    </a>
+  </div>
+  <div class="navbar-nav">
+    <a class="nav-link active" href="dashboard.html"><span class="nav-icon">⊞</span> Dashboard</a>
+    <a class="nav-link" href="devices.html"><span class="nav-icon">💻</span> Devices</a>
+    <a class="nav-link" href="security-log.html"><span class="nav-icon">📋</span> Security Log</a>
+    <a class="nav-link" href="id-card.html"><span class="nav-icon">🪪</span> ID Card</a>
+    <a class="nav-link" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="navUsername" class="badge badge-gold" style="font-size:11px"></span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <a class="sidebar-link active" href="dashboard.html"><span class="sidebar-icon">⊞</span> Dashboard</a>
+      <a class="sidebar-link" href="devices.html"><span class="sidebar-icon">💻</span> Trusted Devices</a>
+      <a class="sidebar-link" href="security-log.html"><span class="sidebar-icon">📋</span> Security Log</a>
+      <a class="sidebar-link" href="id-card.html"><span class="sidebar-icon">🪪</span> Identity Card</a>
+      <a class="sidebar-link" href="settings.html"><span class="sidebar-icon">⚙️</span> Settings</a>
+      <a class="sidebar-link" href="recovery.html"><span class="sidebar-icon">🔄</span> Account Recovery</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Security</div>
+      <div class="sidebar-link" id="sb_status">
+        <span class="sidebar-icon">🟢</span> All Systems Active
+      </div>
+      <div class="sidebar-link">
+        <span class="sidebar-icon">🔐</span> 8 Gates Enabled
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <!-- Welcome Card -->
+    <div class="welcome-card anim-fade-up" id="welcomeCard">
+      <div class="welcome-card-bg">⟁</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--text-sub);margin-bottom:8px">Welcome back</div>
+          <div class="welcome-name" id="wName">Loading...</div>
+          <div class="welcome-id" id="wId">—</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="badge badge-gold">⬡ Maximum Security</span>
+            <span class="badge badge-success" id="wStatus">● Active</span>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);margin-bottom:4px">LAST LOGIN</div>
+          <div style="font-size:13px;color:var(--text-sub)" id="wLastLogin">—</div>
+          <div style="font-size:11px;letter-spacing:1px;color:var(--text-dim);margin-top:10px;margin-bottom:4px">MEMBER SINCE</div>
+          <div style="font-size:13px;color:var(--text-sub)" id="wCreated">—</div>
+        </div>
+      </div>
+      <div class="sec-score-wrap">
+        <div class="sec-score-label">
+          <span class="sec-score-title">Security Score</span>
+          <span class="sec-score-val" id="secScoreLabel">100%</span>
+        </div>
+        <div class="progress">
+          <div class="progress-fill" id="secScoreBar" style="width:100%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stat-grid stat-grid-4 anim-fade-up-d1" style="margin-bottom:24px">
+      <div class="stat-card">
+        <div class="stat-icon">🔐</div>
+        <div class="stat-label">Security Gates</div>
+        <div class="stat-value" style="font-size:22px">8/8</div>
+        <div class="stat-sub">All active</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Total Logins</div>
+        <div class="stat-value" style="font-size:22px" id="statLogins">—</div>
+        <div class="stat-sub">All verified</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🚫</div>
+        <div class="stat-label">Blocked Attempts</div>
+        <div class="stat-value" style="font-size:22px" id="statBlocked">0</div>
+        <div class="stat-sub">This month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💻</div>
+        <div class="stat-label">Trusted Devices</div>
+        <div class="stat-value" style="font-size:22px" id="statDevices">—</div>
+        <div class="stat-sub">Registered</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;color:var(--text-sub);text-transform:uppercase;margin-bottom:12px">Quick Actions</div>
+    <div class="quick-actions anim-fade-up-d2">
+      <a class="qa-btn" href="devices.html"><span class="qa-icon">💻</span><div class="qa-label">Manage Devices</div></a>
+      <a class="qa-btn" href="security-log.html"><span class="qa-icon">📋</span><div class="qa-label">Security Log</div></a>
+      <a class="qa-btn" href="id-card.html"><span class="qa-icon">🪪</span><div class="qa-label">View ID Card</div></a>
+      <a class="qa-btn" href="settings.html"><span class="qa-icon">⚙️</span><div class="qa-label">Settings</div></a>
+    </div>
+
+    <!-- Two columns -->
+    <div class="two-col anim-fade-up-d3">
+      <!-- Security Gates Status -->
+      <div class="card">
+        <div class="card-title">Security Gates</div>
+        <div class="card-subtitle">All 8 layers protecting your account</div>
+        <div id="gatesList"></div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="card-title">Recent Activity</div>
+        <div class="card-subtitle">Last 5 security events</div>
+        <div id="activityList"><div style="color:var(--text-dim);font-size:13px">Loading...</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import {
+  auth, db, ASTRO_ID, getUserDoc, logSecurityEvent,
+  onAuthStateChanged, signOut, fmtDate, fmtDateTime, timeAgo,
+  collection, query, orderBy, limit, getDocs
+} from '../js/firebase.js';
+
+const GATES = [
+  { icon:'🛡️', name:'Master Password',     desc:'Primary authentication gate' },
+  { icon:'📧', name:'Email Verification',   desc:'Recovery email OTP' },
+  { icon:'📱', name:'SMS OTP',              desc:'Firebase Phone Auth' },
+  { icon:'🔑', name:'Authenticator App',    desc:'TOTP via otplib' },
+  { icon:'🧩', name:'Security Questions',   desc:'3 custom questions' },
+  { icon:'🖼️', name:'Image PIN',            desc:'Visual order lock' },
+  { icon:'💻', name:'Device Check',         desc:'Trusted device registry' },
+  { icon:'⏱️', name:'Time Window',          desc:'Login hour restriction' },
+];
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  const data = await getUserDoc(user.uid);
+  if (!data) { window.location.href = 'login.html'; return; }
+
+  // Navbar
+  document.getElementById('navUsername').textContent = data.username;
+
+  // Welcome
+  document.getElementById('wName').textContent = data.username.toUpperCase();
+  document.getElementById('wId').textContent = data.astroId;
+  document.getElementById('wLastLogin').textContent = data.lastLogin ? timeAgo(data.lastLogin) : 'First login';
+  document.getElementById('wCreated').textContent = fmtDate(data.createdAt);
+
+  // Stats
+  document.getElementById('statLogins').textContent = data.loginCount || 1;
+  document.getElementById('statDevices').textContent = data.trustedDevices?.length || 1;
+
+  // Gates list
+  const gl = document.getElementById('gatesList');
+  gl.innerHTML = GATES.map(g => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:18px;width:24px;text-align:center">${g.icon}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${g.name}</div>
+        <div style="font-size:11px;color:var(--text-dim)">${g.desc}</div>
+      </div>
+      <span class="badge badge-success">Active</span>
+    </div>`).join('');
+
+  // Recent activity
+  try {
+    const logRef = collection(db, 'astrolabuss_users', user.uid, 'security_log');
+    const q = query(logRef, orderBy('timestamp','desc'), limit(5));
+    const snap = await getDocs(q);
+    const al = document.getElementById('activityList');
+    if (snap.empty) { al.innerHTML = '<div style="color:var(--text-dim);font-size:13px">No events yet</div>'; return; }
+    al.innerHTML = snap.docs.map(d => {
+      const ev = d.data();
+      const type = ev.status === 'success' ? 'success' : ev.status === 'danger' ? 'danger' : 'info';
+      return `<div class="log-entry">
+        <div class="log-dot ${type}"></div>
+        <div class="log-content">
+          <div class="log-action">${ev.action?.replace(/_/g,' ')}</div>
+          <div class="log-meta">${ev.details||''}</div>
+        </div>
+        <div class="log-time">${ev.timestamp ? timeAgo(ev.timestamp) : '—'}</div>
+      </div>`;
+    }).join('');
+  } catch(_) {}
+
+  // Update login count
+  try {
+    const { updateUserDoc } = await import('../js/firebase.js');
+    await updateUserDoc(user.uid, {
+      lastLogin: new Date(),
+      loginCount: (data.loginCount || 0) + 1
+    });
+  } catch(_) {}
+});
+
+window.doSignOut = async () => {
+  await signOut(auth);
+  window.location.href = 'login.html';
+};
+</script>
+</body>
+</html>

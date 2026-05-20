@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astrolabuss — Devices</title>
+<link rel="stylesheet" href="../css/astro.css">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-orb orb-gold"></div>
+<nav class="navbar">
+  <div class="navbar-brand"><a class="astro-logo" href="dashboard.html"><span class="astro-logo-sym">⟁</span><span class="astro-logo-text">Astrolabuss</span></a></div>
+  <div class="navbar-nav">
+    <a class="nav-link" href="dashboard.html"><span class="nav-icon">⊞</span> Dashboard</a>
+    <a class="nav-link active" href="devices.html"><span class="nav-icon">💻</span> Devices</a>
+    <a class="nav-link" href="security-log.html"><span class="nav-icon">📋</span> Security Log</a>
+    <a class="nav-link" href="id-card.html"><span class="nav-icon">🪪</span> ID Card</a>
+    <a class="nav-link" href="settings.html"><span class="nav-icon">⚙️</span> Settings</a>
+  </div>
+  <div class="navbar-actions">
+    <span id="navUser" class="badge badge-gold"></span>
+    <button class="btn btn-outline btn-sm" onclick="doSignOut()">Sign Out</button>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <a class="sidebar-link" href="dashboard.html"><span class="sidebar-icon">⊞</span> Dashboard</a>
+      <a class="sidebar-link active" href="devices.html"><span class="sidebar-icon">💻</span> Trusted Devices</a>
+      <a class="sidebar-link" href="security-log.html"><span class="sidebar-icon">📋</span> Security Log</a>
+      <a class="sidebar-link" href="id-card.html"><span class="sidebar-icon">🪪</span> Identity Card</a>
+      <a class="sidebar-link" href="settings.html"><span class="sidebar-icon">⚙️</span> Settings</a>
+      <a class="sidebar-link" href="recovery.html"><span class="sidebar-icon">🔄</span> Recovery</a>
+    </div>
+  </aside>
+  <main class="main-content">
+    <div class="page-title anim-fade-up">Trusted Devices</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:28px" class="anim-fade-up-d1">Devices registered to your Astrolabuss account. Only these devices can complete login.</div>
+
+    <div class="card anim-fade-up-d1" style="margin-bottom:20px">
+      <div class="card-title mb-16">Current Device</div>
+      <div class="device-card trusted" id="currentDevice">
+        <div class="device-icon" id="devIcon">💻</div>
+        <div class="device-info">
+          <div class="device-name" id="devName">Loading...</div>
+          <div class="device-meta" id="devMeta">—</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <span class="badge badge-success">● Current</span>
+          <button class="btn btn-sm btn-outline" onclick="addThisDevice()">Add as Trusted</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card anim-fade-up-d2">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div class="card-title">Registered Devices</div>
+          <div class="card-subtitle" style="margin-bottom:0">Devices that can complete the device verification gate</div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="refreshDevices()">↻ Refresh</button>
+      </div>
+      <div id="deviceList"><div style="color:var(--text-dim);font-size:13px;padding:20px 0">Loading...</div></div>
+    </div>
+
+    <div class="card anim-fade-up-d3" style="margin-top:20px">
+      <div class="card-title mb-8">Device Security Info</div>
+      <div class="alert alert-warn">Removing all trusted devices will block login until you add a new one during your next session.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px">
+        <div class="stat-card">
+          <div class="stat-label">Max Devices</div>
+          <div class="stat-value" style="font-size:20px">10</div>
+          <div class="stat-sub">Allowed per account</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Registered</div>
+          <div class="stat-value" style="font-size:20px" id="devCount">—</div>
+          <div class="stat-sub">Currently active</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script type="module">
+import { auth, db, getUserDoc, updateUserDoc, getDeviceFingerprint, getDeviceLabel, onAuthStateChanged, signOut, arrayUnion, arrayRemove, toast } from '../js/firebase.js';
+let userData = null;
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href='login.html'; return; }
+  userData = await getUserDoc(user.uid);
+  if (!userData) { window.location.href='login.html'; return; }
+  document.getElementById('navUser').textContent = userData.username;
+
+  const label = getDeviceLabel();
+  document.getElementById('devIcon').textContent = label.split(' ')[0];
+  document.getElementById('devName').textContent = label.slice(2);
+  document.getElementById('devMeta').textContent = `${navigator.platform} · ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
+
+  renderDevices();
+});
+
+function renderDevices() {
+  const list = document.getElementById('deviceList');
+  const devices = userData?.trustedDevices || [];
+  document.getElementById('devCount').textContent = devices.length;
+  if (!devices.length) { list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px 0;text-align:center">No trusted devices registered</div>'; return; }
+  list.innerHTML = devices.map((d, i) => {
+    let parsed = {};
+    try { parsed = JSON.parse(d); } catch(_) {}
+    const label = parsed.isMobile ? '📱 Mobile' : parsed.platform?.includes('Win') ? '🖥️ Windows' : parsed.platform?.includes('Mac') ? '💻 Mac' : '💻 Device';
+    return `<div class="device-card trusted mb-8" style="margin-bottom:10px">
+      <div class="device-icon">${label.split(' ')[0]}</div>
+      <div class="device-info">
+        <div class="device-name">${label.slice(2) || `Device ${i+1}`}</div>
+        <div class="device-meta">${parsed.platform||'Unknown'} · ${parsed.timezone||'—'} · ${(parsed.ua||'').slice(0,40)}...</div>
+      </div>
+      <div class="device-actions">
+        <span class="badge badge-gold">Trusted</span>
+        <button class="btn btn-danger btn-sm" onclick="removeDevice(${i})">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.addThisDevice = async () => {
+  const fp = JSON.stringify(getDeviceFingerprint());
+  const uid = auth.currentUser.uid;
+  await updateUserDoc(uid, { trustedDevices: arrayUnion(fp) });
+  userData.trustedDevices = [...(userData.trustedDevices||[]), fp];
+  renderDevices();
+  toast('Device added as trusted', 'success');
+};
+
+window.removeDevice = async (i) => {
+  if (!confirm('Remove this trusted device?')) return;
+  const fp = userData.trustedDevices[i];
+  const uid = auth.currentUser.uid;
+  await updateUserDoc(uid, { trustedDevices: arrayRemove(fp) });
+  userData.trustedDevices.splice(i, 1);
+  renderDevices();
+  toast('Device removed', 'success');
+};
+
+window.refreshDevices = async () => {
+  userData = await getUserDoc(auth.currentUser.uid);
+  renderDevices();
+  toast('Refreshed', 'success');
+};
+
+window.doSignOut = async () => { await signOut(auth); window.location.href='login.html'; };
+</script>
+</body>
+</html>
